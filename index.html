@@ -105,36 +105,6 @@ interface AppState {
   version: string
 }
 
-// Componente de patrón de fondo con frutas y verduras
-const FoodPattern = () => (
-  <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-10">
-    <div className="absolute inset-0">
-      {/* Patrón de emojis de frutas y verduras */}
-      <div className="grid grid-cols-8 gap-8 p-8">
-        {Array.from({ length: 64 }).map((_, i) => {
-          const foodEmojis = ['🍎', '🥕', '🍊', '🥦', '🍇', '🥬', '🍓', '🌽', '🍅', '🥒', '🍋', '🥑', '🍑', '🫐', '🥝', '🍆'];
-          const emoji = foodEmojis[i % foodEmojis.length];
-          return (
-            <div key={i} className="text-6xl transform rotate-12 select-none" style={{ 
-              transform: `rotate(${(i * 15) % 360}deg) scale(${0.8 + (i % 3) * 0.2})`,
-              animation: `float ${10 + (i % 5)}s ease-in-out infinite`,
-              animationDelay: `${i * 0.2}s`
-            }}>
-              {emoji}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-    <style jsx>{`
-      @keyframes float {
-        0%, 100% { transform: translateY(0px) rotate(0deg); }
-        50% { transform: translateY(-20px) rotate(10deg); }
-      }
-    `}</style>
-  </div>
-);
-
 export default function PlanificadorCompras() {
   // Estado principal de la aplicación
   const [state, setState] = useState<AppState>({
@@ -162,7 +132,7 @@ export default function PlanificadorCompras() {
         'Sábado': { desayuno: 'Plátano', almuerzo: 'Ensalada de frutas', snacks: 'Mandarina' },
         'Domingo': { desayuno: 'Melón', almuerzo: 'Pimientos al horno', snacks: 'Uvas' },
     },
-    version: '3.1'
+    version: '3.1' // Versión actualizada para reflejar cambios
   })
 
   // Estados para UI
@@ -170,13 +140,14 @@ export default function PlanificadorCompras() {
   const [pendingImportData, setPendingImportData] = useState<AppState | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
 
+
   // Efecto para cargar datos del localStorage al iniciar
   useEffect(() => {
     const savedState = localStorage.getItem('planificadorCompras_v3.1')
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState)
-        if (parsed.version === '3.1') {
+        if (parsed.version === '3.1') { // Solo cargar si es la versión correcta
           setState(parsed)
         }
       } catch (error) {
@@ -199,7 +170,9 @@ export default function PlanificadorCompras() {
   const normalizeString = (str: string) => 
     (str || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
 
-  // --- Lógica de Negocio ---
+  // --- Lógica de Negocio (Cálculos corregidos) ---
+
+  // Encuentra el mejor precio unitario registrado para un producto
   const findBestPrice = (producto: string) => {
     const normalizedProd = normalizeString(producto)
     if (!normalizedProd) return { tienda: null, precioUnitario: null };
@@ -222,6 +195,7 @@ export default function PlanificadorCompras() {
     }
   }
 
+  // Calcula el costo total estimado de la lista de compras
   const calculateTotalEstimado = () => {
     return state.listaCompras.reduce((total, item) => {
       const { precioUnitario } = findBestPrice(item.producto)
@@ -231,6 +205,7 @@ export default function PlanificadorCompras() {
     }, 0)
   }
 
+  // Calcula el gasto real en los últimos 7 días
   const calculateGastoReal = () => {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
@@ -240,6 +215,7 @@ export default function PlanificadorCompras() {
       .reduce((sum, p) => sum + Number(p.precioTotal || 0), 0)
   }
   
+  // Calcula días restantes para el vencimiento de un producto
   const getDaysRemaining = (fechaVenc: string) => {
     const today = new Date(getTodayDate())
     const vencDate = new Date(fechaVenc)
@@ -247,28 +223,30 @@ export default function PlanificadorCompras() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   }
 
+  // Devuelve estilo e icono según la urgencia de consumo
   const getPriorityInfo = (days: number) => {
     if (days <= 2) return { class: 'bg-red-100 text-red-800', text: 'Usar YA', icon: AlertTriangle }
     if (days <= 7) return { class: 'bg-yellow-100 text-yellow-800', text: 'Usar Pronto', icon: Clock }
     return { class: 'bg-green-100 text-green-800', text: 'OK', icon: CheckCircle }
   }
 
-  // --- Lógica de Gráficos ---
+  // --- Lógica de Gráficos con colores dinámicos ---
+
   const getProductoColor = (producto: string): string => {
     const normProducto = normalizeString(producto);
-    if (normProducto.includes('manzana')) return '#ef4444';
-    if (normProducto.includes('platano') || normProducto.includes('banana')) return '#f59e0b';
-    if (normProducto.includes('uva')) return '#8b5cf6';
-    if (normProducto.includes('naranja')) return '#f97316';
-    if (normProducto.includes('mandarina')) return '#ea580c';
-    if (normProducto.includes('sandia')) return '#22c55e';
-    if (normProducto.includes('limon') || normProducto.includes('lima')) return '#84cc16';
-    if (normProducto.includes('fresa')) return '#ec4899';
-    if (normProducto.includes('arandano') || normProducto.includes('mora')) return '#6366f1';
-    if (normProducto.includes('tomate')) return '#dc2626';
-    if (normProducto.includes('lechuga') || normProducto.includes('espinaca')) return '#16a34a';
-    if (normProducto.includes('zanahoria')) return '#f97316';
-    if (normProducto.includes('papa') || normProducto.includes('camote')) return '#a16207';
+    if (normProducto.includes('manzana')) return '#ef4444'; // red-500
+    if (normProducto.includes('platano') || normProducto.includes('banana')) return '#f59e0b'; // amber-500
+    if (normProducto.includes('uva')) return '#8b5cf6'; // violet-500
+    if (normProducto.includes('naranja')) return '#f97316'; // orange-500
+    if (normProducto.includes('mandarina')) return '#ea580c'; // orange-600
+    if (normProducto.includes('sandia')) return '#22c55e'; // green-500
+    if (normProducto.includes('limon') || normProducto.includes('lima')) return '#84cc16'; // lime-500
+    if (normProducto.includes('fresa')) return '#ec4899'; // pink-500
+    if (normProducto.includes('arandano') || normProducto.includes('mora')) return '#6366f1'; // indigo-500
+    if (normProducto.includes('tomate')) return '#dc2626'; // red-600
+    if (normProducto.includes('lechuga') || normProducto.includes('espinaca')) return '#16a34a'; // green-600
+    if (normProducto.includes('zanahoria')) return '#f97316'; // orange-500
+    if (normProducto.includes('papa') || normProducto.includes('camote')) return '#a16207'; // yellow-700
     
     const colors = ['#34d399', '#6ee7b7', '#059669', '#047857', '#065f46'];
     const hash = normProducto.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
@@ -324,7 +302,8 @@ export default function PlanificadorCompras() {
     }
   }
 
-  // --- Handlers ---
+  // --- Handlers (Manejadores de eventos y actualizaciones de estado) ---
+  
   const createItemUpdater = <T extends { id: number }>(listName: keyof AppState) => {
       return (id: number, field: keyof T, value: any) => {
           const list = state[listName] as T[];
@@ -399,7 +378,7 @@ export default function PlanificadorCompras() {
     saveState(newState)
   }
 
-  // --- Importar / Exportar ---
+  // --- Importar / Exportar / Limpiar Datos ---
   const exportData = () => {
     const dataStr = JSON.stringify(state, null, 2)
     const dataBlob = new Blob([dataStr], { type: 'application/json' })
@@ -450,15 +429,9 @@ export default function PlanificadorCompras() {
   const gastoReal = calculateGastoReal()
   const ahorroEstimado = Math.max(0, state.presupuesto - totalEstimado)
 
-  // --- Renderizado ---
+  // --- Renderizado del Componente ---
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-green-50 via-lime-50 to-emerald-50 text-slate-800">
-      {/* Patrón de fondo con frutas y verduras */}
-      <FoodPattern />
-      
-      {/* Overlay gradiente suave */}
-      <div className="fixed inset-0 bg-gradient-to-br from-white/40 via-transparent to-white/30 pointer-events-none" />
-      
+    <div className="min-h-screen bg-gradient-to-br from-lime-50 via-green-50 to-teal-50 text-slate-800">
       {backupVisible && (
         <div className="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-pulse">
           <CheckCircle className="w-5 h-5" />
@@ -481,7 +454,7 @@ export default function PlanificadorCompras() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="container mx-auto p-4 md:p-8 relative z-10">
+      <div className="container mx-auto p-4 md:p-8">
         <header className="text-center mb-8">
           <div className="flex items-center justify-center gap-4 mb-4">
             <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full shadow-lg">
@@ -496,36 +469,24 @@ export default function PlanificadorCompras() {
           </p>
           
           <div className="flex flex-wrap justify-center gap-3 mt-6">
-            <Button onClick={exportData} variant="outline" className="border-emerald-300 hover:bg-emerald-100/50 hover:text-emerald-800 transition-colors backdrop-blur-sm">
-              <Download className="w-4 h-4 mr-2" />Exportar
-            </Button>
-            <Button onClick={() => importFileRef.current?.click()} variant="outline" className="border-emerald-300 hover:bg-emerald-100/50 hover:text-emerald-800 transition-colors backdrop-blur-sm">
-              <Upload className="w-4 h-4 mr-2" />Importar
-            </Button>
+            <Button onClick={exportData} variant="outline" className="border-emerald-300 hover:bg-emerald-100/50 hover:text-emerald-800 transition-colors"><Download className="w-4 h-4 mr-2" />Exportar</Button>
+            <Button onClick={() => importFileRef.current?.click()} variant="outline" className="border-emerald-300 hover:bg-emerald-100/50 hover:text-emerald-800 transition-colors"><Upload className="w-4 h-4 mr-2" />Importar</Button>
             <input id="import-file" ref={importFileRef} type="file" accept=".json" onChange={handleFileImport} className="hidden" />
             
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" className="border-red-300 hover:bg-red-100/50 text-red-600 hover:text-red-700 transition-colors backdrop-blur-sm">
-                  <Trash2 className="w-4 h-4 mr-2" />Limpiar
-                </Button>
+                <Button variant="outline" className="border-red-300 hover:bg-red-100/50 text-red-600 hover:text-red-700 transition-colors"><Trash2 className="w-4 h-4 mr-2" />Limpiar</Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-                  <AlertDialogDescription>Esta acción es irreversible. Se borrarán TODOS los datos.</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={clearAllData} className="bg-red-600 hover:bg-red-700">Sí, borrar todo</AlertDialogAction>
-                </AlertDialogFooter>
+                <AlertDialogHeader><AlertDialogTitle>🚨 ¿Estás absolutamente seguro? 🚨</AlertDialogTitle><AlertDialogDescription>Esta acción es irreversible. Se borrarán TODOS los datos.</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={clearAllData} className="bg-red-600 hover:bg-red-700">Sí, borrar todo</AlertDialogAction></AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
           </div>
         </header>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-8 bg-white/80 backdrop-blur-md rounded-xl p-2 h-auto shadow-lg">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 mb-8 bg-white/60 backdrop-blur-sm rounded-xl p-2 h-auto shadow-inner">
             <TabsTrigger value="dashboard"><TrendingUp className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Dashboard</span></TabsTrigger>
             <TabsTrigger value="lista_compras"><ShoppingCart className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Lista</span></TabsTrigger>
             <TabsTrigger value="precios"><DollarSign className="w-4 h-4 sm:mr-2" /><span className="hidden sm:inline">Precios</span></TabsTrigger>
@@ -536,93 +497,45 @@ export default function PlanificadorCompras() {
 
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Tarjeta de Presupuesto Semanal - Azul */}
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-blue-100 to-blue-50 border-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-blue-700">Presupuesto Semanal</CardTitle>
-                </CardHeader>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow border-t-4 border-blue-400">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-base font-medium text-slate-600">Presupuesto</CardTitle><Wallet className="h-5 w-5 text-blue-500" /></CardHeader>
                 <CardContent>
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-blue-900">S/</span>
-                    <Input
+                    <span className="text-xl font-medium text-slate-500">S/</span>
+                     <Input
                       type="number"
                       value={state.presupuesto}
                       onChange={(e) => saveState({ ...state, presupuesto: parseFloat(e.target.value) || 0 })}
-                      className="text-4xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-2 focus-visible:ring-blue-400 rounded-md w-28 text-blue-900"
+                      className="text-3xl font-bold border-0 bg-transparent p-0 h-auto focus-visible:ring-1 focus-visible:ring-offset-1 focus-visible:ring-blue-400 rounded-md px-1 w-32"
                     />
                   </div>
+                  <p className="text-xs text-slate-500/80 mt-1">Tu límite de gasto semanal.</p>
                 </CardContent>
               </Card>
-
-              {/* Tarjeta de Total Estimado - Verde */}
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-green-100 to-green-50 border-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-green-700">Total Estimado Compra</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-4xl font-bold text-green-900">{formatCurrency(totalEstimado)}</p>
-                </CardContent>
+               <Card className="shadow-lg hover:shadow-xl transition-shadow border-t-4 border-green-400">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-base font-medium text-slate-600">Total Estimado</CardTitle><ShoppingCart className="h-5 w-5 text-green-500" /></CardHeader>
+                <CardContent><p className="text-3xl font-bold text-green-700">{formatCurrency(totalEstimado)}</p><p className="text-xs text-slate-500/80 mt-1">Costo de tu lista de compras.</p></CardContent>
               </Card>
-
-              {/* Tarjeta de Gasto Real - Naranja */}
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-orange-100 to-orange-50 border-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-orange-700">Gasto Real (7 días)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-4xl font-bold text-orange-900">{formatCurrency(gastoReal)}</p>
-                </CardContent>
+              <Card className="shadow-lg hover:shadow-xl transition-shadow border-t-4 border-orange-400">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-base font-medium text-slate-600">Gasto Real</CardTitle><TrendingUp className="h-5 w-5 text-orange-500" /></CardHeader>
+                <CardContent><p className="text-3xl font-bold text-orange-700">{formatCurrency(gastoReal)}</p><p className="text-xs text-slate-500/80 mt-1">En los últimos 7 días.</p></CardContent>
               </Card>
-
-              {/* Tarjeta de Ahorro Estimado - Violeta */}
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-purple-100 to-purple-50 border-0">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-purple-700">Ahorro Estimado</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-4xl font-bold text-purple-900">{formatCurrency(ahorroEstimado)}</p>
-                </CardContent>
+               <Card className="shadow-lg hover:shadow-xl transition-shadow border-t-4 border-purple-400">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"><CardTitle className="text-base font-medium text-slate-600">Ahorro Potencial</CardTitle><PiggyBank className="h-5 w-5 text-purple-500" /></CardHeader>
+                <CardContent><p className="text-3xl font-bold text-purple-700">{formatCurrency(ahorroEstimado)}</p><p className="text-xs text-slate-500/80 mt-1">Presupuesto vs. Gasto.</p></CardContent>
               </Card>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-              <Card className="lg:col-span-3 bg-white/90 backdrop-blur-sm shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-green-800">Gastos de los Últimos 7 Días</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Line data={getChartData()} options={{ 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false }}, 
-                    scales: { y: { beginAtZero: true }}
-                  }} />
-                </CardContent>
-              </Card>
-              
-              <Card className="lg:col-span-2 bg-white/90 backdrop-blur-sm shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-green-800">Gasto por Producto</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Bar data={getProductosChart()} options={{ 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    indexAxis: 'y', 
-                    plugins: { legend: { display: false }}, 
-                    scales: { y: { beginAtZero: true }}
-                  }} />
-                </CardContent>
-              </Card>
+               <Card className="lg:col-span-3 bg-white/70 backdrop-blur-sm shadow-md"><CardHeader><CardTitle className="text-green-800">Gastos de los Últimos 7 Días</CardTitle></CardHeader><CardContent><Line data={getChartData()} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true }}}} /></CardContent></Card>
+               <Card className="lg:col-span-2 bg-white/70 backdrop-blur-sm shadow-md"><CardHeader><CardTitle className="text-green-800">Gasto por Producto</CardTitle></CardHeader><CardContent><Bar data={getProductosChart()} options={{ responsive: true, maintainAspectRatio: false, indexAxis: 'y', plugins: { legend: { display: false }}, scales: { y: { beginAtZero: true }}}} /></CardContent></Card>
             </div>
           </TabsContent>
 
           <TabsContent value="lista_compras">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-xl">
+            <Card className="bg-white/70 backdrop-blur-sm shadow-lg">
               <CardHeader>
-                <CardTitle className="text-green-800 flex items-center gap-2">
-                  <ShoppingCart className="w-6 h-6" />Lista de Compras
-                </CardTitle>
+                <CardTitle className="text-green-800 flex items-center gap-2"><ShoppingCart className="w-6 h-6" />Lista de Compras</CardTitle>
                 <CardDescription>Total estimado: <span className="font-bold text-green-700">{formatCurrency(totalEstimado)}</span></CardDescription>
               </CardHeader>
               <CardContent>
@@ -643,21 +556,13 @@ export default function PlanificadorCompras() {
                         const { tienda, precioUnitario } = findBestPrice(item.producto)
                         const subtotal = (Number(item.cantidad) || 0) * (precioUnitario || 0)
                         return (
-                          <tr key={item.id} className="border-b border-green-100 hover:bg-green-50/50 transition-colors">
-                            <td className="p-2">
-                              <Input value={item.producto} onChange={(e) => updateListaComprasItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 w-32">
-                              <Input type="number" step="0.1" value={item.cantidad} onChange={(e) => updateListaComprasItem(item.id, 'cantidad', parseFloat(e.target.value) || 0)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
+                          <tr key={item.id} className="border-b border-green-100 hover:bg-green-100/50 transition-colors">
+                            <td className="p-2"><Input value={item.producto} onChange={(e) => updateListaComprasItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                            <td className="p-2 w-32"><Input type="number" step="0.1" value={item.cantidad} onChange={(e) => updateListaComprasItem(item.id, 'cantidad', parseFloat(e.target.value) || 0)} className="border-green-200 focus:border-green-400 h-9" /></td>
                             <td className="p-2 text-green-700 font-medium">{tienda || 'N/A'}</td>
                             <td className="p-2 text-right">{precioUnitario ? formatCurrency(precioUnitario) : 'N/A'}</td>
                             <td className="p-2 text-right font-bold text-green-600">{formatCurrency(subtotal)}</td>
-                            <td className="p-2 text-center">
-                              <Button variant="ghost" size="icon" onClick={() => deleteListaComprasItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                                <Trash2 className="w-5 h-5" />
-                              </Button>
-                            </td>
+                            <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => deleteListaComprasItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100"><Trash2 className="w-5 h-5" /></Button></td>
                           </tr>
                         )
                       })}
@@ -665,224 +570,129 @@ export default function PlanificadorCompras() {
                   </table>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button onClick={addListaComprasItem} className="bg-green-600 hover:bg-green-700 shadow-md">
-                  <Plus className="w-4 h-4 mr-2" />Añadir Producto
-                </Button>
-              </CardFooter>
+              <CardFooter><Button onClick={addListaComprasItem} className="bg-green-600 hover:bg-green-700 shadow-md"><Plus className="w-4 h-4 mr-2" />Añadir Producto</Button></CardFooter>
             </Card>
           </TabsContent>
 
           <TabsContent value="precios">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-green-800 flex items-center gap-2">
-                  <DollarSign className="w-6 h-6" />Registro de Precios
-                </CardTitle>
-                <CardDescription>Registra tus compras para encontrar siempre los mejores precios.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b-2 border-green-200">
-                      <tr>
-                        <th className="p-2 text-left font-semibold text-green-800">Fecha</th>
-                        <th className="p-2 text-left font-semibold text-green-800">Tienda</th>
-                        <th className="p-2 text-left font-semibold text-green-800">Producto</th>
-                        <th className="p-2 text-left font-semibold text-green-800">Unidad</th>
-                        <th className="p-2 text-right font-semibold text-green-800">Cantidad</th>
-                        <th className="p-2 text-right font-semibold text-green-800">Precio Total</th>
-                        <th className="p-2 text-right font-semibold text-green-800">Precio/u</th>
-                        <th className="p-2 text-center font-semibold text-green-800">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.precios.map((item) => {
-                        const precioUnitario = item.cantidad > 0 ? (Number(item.precioTotal) || 0) / (Number(item.cantidad) || 1) : 0;
-                        return (
-                          <tr key={item.id} className="border-b border-green-100 hover:bg-green-50/50 transition-colors">
-                            <td className="p-2">
-                              <Input type="date" value={item.fecha} onChange={(e) => updatePrecioItem(item.id, 'fecha', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2">
-                              <Input value={item.tienda} onChange={(e) => updatePrecioItem(item.id, 'tienda', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2">
-                              <Input value={item.producto} onChange={(e) => updatePrecioItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 w-28">
-                              <Input value={item.unidad} onChange={(e) => updatePrecioItem(item.id, 'unidad', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 w-32">
-                              <Input type="number" step="0.1" value={item.cantidad} onChange={(e) => updatePrecioItem(item.id, 'cantidad', parseFloat(e.target.value) || 0)} className="text-right border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 w-32">
-                              <Input type="number" step="0.01" value={item.precioTotal} onChange={(e) => updatePrecioItem(item.id, 'precioTotal', parseFloat(e.target.value) || 0)} className="text-right border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 text-right font-bold text-green-600">{formatCurrency(precioUnitario)}</td>
-                            <td className="p-2 text-center">
-                              <Button variant="ghost" size="icon" onClick={() => deletePrecioItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                                <Trash2 className="w-5 h-5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={addPrecioItem} className="bg-green-600 hover:bg-green-700 shadow-md">
-                  <Plus className="w-4 h-4 mr-2" />Añadir Compra
-                </Button>
-              </CardFooter>
+             <Card className="bg-white/70 backdrop-blur-sm shadow-lg">
+                <CardHeader><CardTitle className="text-green-800 flex items-center gap-2"><DollarSign className="w-6 h-6" />Registro de Precios</CardTitle><CardDescription>Registra tus compras para encontrar siempre los mejores precios y alimentar los gráficos.</CardDescription></CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="border-b-2 border-green-200">
+                                <tr>
+                                    <th className="p-2 text-left font-semibold text-green-800">Fecha</th>
+                                    <th className="p-2 text-left font-semibold text-green-800">Tienda</th>
+                                    <th className="p-2 text-left font-semibold text-green-800">Producto</th>
+                                    <th className="p-2 text-left font-semibold text-green-800">Unidad</th>
+                                    <th className="p-2 text-right font-semibold text-green-800">Cantidad</th>
+                                    <th className="p-2 text-right font-semibold text-green-800">Precio Total</th>
+                                    <th className="p-2 text-right font-semibold text-green-800">Precio/u</th>
+                                    <th className="p-2 text-center font-semibold text-green-800">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {state.precios.map((item) => {
+                                    const precioUnitario = item.cantidad > 0 ? (Number(item.precioTotal) || 0) / (Number(item.cantidad) || 1) : 0;
+                                    return (
+                                        <tr key={item.id} className="border-b border-green-100 hover:bg-green-100/50 transition-colors">
+                                            <td className="p-2"><Input type="date" value={item.fecha} onChange={(e) => updatePrecioItem(item.id, 'fecha', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2"><Input value={item.tienda} onChange={(e) => updatePrecioItem(item.id, 'tienda', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2"><Input value={item.producto} onChange={(e) => updatePrecioItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2 w-28"><Input value={item.unidad} onChange={(e) => updatePrecioItem(item.id, 'unidad', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2 w-32"><Input type="number" step="0.1" value={item.cantidad} onChange={(e) => updatePrecioItem(item.id, 'cantidad', parseFloat(e.target.value) || 0)} className="text-right border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2 w-32"><Input type="number" step="0.01" value={item.precioTotal} onChange={(e) => updatePrecioItem(item.id, 'precioTotal', parseFloat(e.target.value) || 0)} className="text-right border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2 text-right font-bold text-green-600">{formatCurrency(precioUnitario)}</td>
+                                            <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => deletePrecioItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100"><Trash2 className="w-5 h-5" /></Button></td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+                <CardFooter><Button onClick={addPrecioItem} className="bg-green-600 hover:bg-green-700 shadow-md"><Plus className="w-4 h-4 mr-2" />Añadir Compra</Button></CardFooter>
             </Card>
           </TabsContent>
 
           <TabsContent value="inventario">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-green-800 flex items-center gap-2">
-                  <Home className="w-6 h-6" />Inventario en Casa
-                </CardTitle>
-                <CardDescription>Control de productos para evitar desperdicios.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="border-b-2 border-green-200">
-                      <tr>
-                        <th className="p-2 text-left font-semibold text-green-800">Producto</th>
-                        <th className="p-2 text-left font-semibold text-green-800">F. Compra</th>
-                        <th className="p-2 text-left font-semibold text-green-800">F. Venc.</th>
-                        <th className="p-2 text-center font-semibold text-green-800">Días Rest.</th>
-                        <th className="p-2 text-center font-semibold text-green-800">Estado</th>
-                        <th className="p-2 text-center font-semibold text-green-800">Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.inventario.map((item) => {
-                        const daysRemaining = getDaysRemaining(item.fechaVenc);
-                        const priority = getPriorityInfo(daysRemaining);
-                        const PriorityIcon = priority.icon;
-                        return (
-                          <tr key={item.id} className="border-b border-green-100 hover:bg-green-50/50 transition-colors">
-                            <td className="p-2">
-                              <Input value={item.producto} onChange={(e) => updateInventarioItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2">
-                              <Input type="date" value={item.fechaCompra} onChange={(e) => updateInventarioItem(item.id, 'fechaCompra', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2">
-                              <Input type="date" value={item.fechaVenc} onChange={(e) => updateInventarioItem(item.id, 'fechaVenc', e.target.value)} className="border-green-200 focus:border-green-400 h-9" />
-                            </td>
-                            <td className="p-2 text-center font-bold text-slate-700">{daysRemaining}</td>
-                            <td className="p-2 text-center">
-                              <Badge className={`${priority.class} flex items-center gap-1.5 justify-center`}>
-                                <PriorityIcon className="w-4 h-4" />{priority.text}
-                              </Badge>
-                            </td>
-                            <td className="p-2 text-center">
-                              <Button variant="ghost" size="icon" onClick={() => deleteInventarioItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100">
-                                <Trash2 className="w-5 h-5" />
-                              </Button>
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={addInventarioItem} className="bg-green-600 hover:bg-green-700 shadow-md">
-                  <Plus className="w-4 h-4 mr-2" />Añadir a Inventario
-                </Button>
-              </CardFooter>
+             <Card className="bg-white/70 backdrop-blur-sm shadow-lg">
+                <CardHeader><CardTitle className="text-green-800 flex items-center gap-2"><Home className="w-6 h-6" />Inventario en Casa</CardTitle><CardDescription>Lleva un control de lo que tienes para evitar comprar de más y reducir el desperdicio.</CardDescription></CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                           <thead className="border-b-2 border-green-200">
+                                <tr>
+                                    <th className="p-2 text-left font-semibold text-green-800">Producto</th>
+                                    <th className="p-2 text-left font-semibold text-green-800">F. Compra</th>
+                                    <th className="p-2 text-left font-semibold text-green-800">F. Venc.</th>
+                                    <th className="p-2 text-center font-semibold text-green-800">Días Rest.</th>
+                                    <th className="p-2 text-center font-semibold text-green-800">Estado</th>
+                                    <th className="p-2 text-center font-semibold text-green-800">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {state.inventario.map((item) => {
+                                    const daysRemaining = getDaysRemaining(item.fechaVenc);
+                                    const priority = getPriorityInfo(daysRemaining);
+                                    const PriorityIcon = priority.icon;
+                                    return (
+                                        <tr key={item.id} className="border-b border-green-100 hover:bg-green-100/50 transition-colors">
+                                            <td className="p-2"><Input value={item.producto} onChange={(e) => updateInventarioItem(item.id, 'producto', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2"><Input type="date" value={item.fechaCompra} onChange={(e) => updateInventarioItem(item.id, 'fechaCompra', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2"><Input type="date" value={item.fechaVenc} onChange={(e) => updateInventarioItem(item.id, 'fechaVenc', e.target.value)} className="border-green-200 focus:border-green-400 h-9" /></td>
+                                            <td className="p-2 text-center font-bold text-slate-700">{daysRemaining}</td>
+                                            <td className="p-2 text-center"><Badge className={`${priority.class} flex items-center gap-1.5 justify-center`}><PriorityIcon className="w-4 h-4" />{priority.text}</Badge></td>
+                                            <td className="p-2 text-center"><Button variant="ghost" size="icon" onClick={() => deleteInventarioItem(item.id)} className="text-red-500 hover:text-red-700 hover:bg-red-100"><Trash2 className="w-5 h-5" /></Button></td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardContent>
+                <CardFooter><Button onClick={addInventarioItem} className="bg-green-600 hover:bg-green-700 shadow-md"><Plus className="w-4 h-4 mr-2" />Añadir a Inventario</Button></CardFooter>
             </Card>
           </TabsContent>
 
           <TabsContent value="plan_semanal">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-green-800 flex items-center gap-2">
-                  <Calendar className="w-6 h-6" />Plan de Comidas Semanal
-                </CardTitle>
-                <CardDescription>Organiza tus comidas para la semana.</CardDescription>
-              </CardHeader>
-              <CardContent className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="border-b-2 border-green-200">
-                    <tr>
-                      <th className="p-2 text-left font-semibold text-green-800">Día</th>
-                      <th className="p-2 text-left font-semibold text-green-800">Desayuno</th>
-                      <th className="p-2 text-left font-semibold text-green-800">Almuerzo</th>
-                      <th className="p-2 text-left font-semibold text-green-800">Snacks</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(state.planSemanal).map(([dia, comidas]) => (
-                      <tr key={dia} className="border-b border-green-100 hover:bg-green-50/50 transition-colors">
-                        <td className="p-2 font-bold text-green-700">{dia}</td>
-                        <td className="p-2">
-                          <Input value={comidas.desayuno} onChange={(e) => updatePlanSemanal(dia, 'desayuno', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/>
-                        </td>
-                        <td className="p-2">
-                          <Input value={comidas.almuerzo} onChange={(e) => updatePlanSemanal(dia, 'almuerzo', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/>
-                        </td>
-                        <td className="p-2">
-                          <Input value={comidas.snacks} onChange={(e) => updatePlanSemanal(dia, 'snacks', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
+            <Card className="bg-white/70 backdrop-blur-sm shadow-lg">
+                <CardHeader><CardTitle className="text-green-800 flex items-center gap-2"><Calendar className="w-6 h-6" />Plan de Comidas Semanal</CardTitle><CardDescription>Organiza tus comidas para saber exactamente qué necesitas comprar.</CardDescription></CardHeader>
+                <CardContent className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                       <thead className="border-b-2 border-green-200">
+                           <tr>
+                                <th className="p-2 text-left font-semibold text-green-800">Día</th>
+                                <th className="p-2 text-left font-semibold text-green-800">Desayuno</th>
+                                <th className="p-2 text-left font-semibold text-green-800">Almuerzo</th>
+                                <th className="p-2 text-left font-semibold text-green-800">Snacks</th>
+                           </tr>
+                       </thead>
+                       <tbody>
+                            {Object.entries(state.planSemanal).map(([dia, comidas]) => (
+                                <tr key={dia} className="border-b border-green-100 hover:bg-green-100/50 transition-colors">
+                                    <td className="p-2 font-bold text-green-700">{dia}</td>
+                                    <td className="p-2"><Input value={comidas.desayuno} onChange={(e) => updatePlanSemanal(dia, 'desayuno', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/></td>
+                                    <td className="p-2"><Input value={comidas.almuerzo} onChange={(e) => updatePlanSemanal(dia, 'almuerzo', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/></td>
+                                    <td className="p-2"><Input value={comidas.snacks} onChange={(e) => updatePlanSemanal(dia, 'snacks', e.target.value)} className="border-green-200 focus:border-green-400 h-9"/></td>
+                                </tr>
+                            ))}
+                       </tbody>
+                    </table>
+                </CardContent>
             </Card>
           </TabsContent>
           
           <TabsContent value="guia">
-            <Card className="bg-white/90 backdrop-blur-sm shadow-xl">
-              <CardHeader>
-                <CardTitle className="text-green-800 flex items-center gap-2">
-                  <Apple className="w-6 h-6" />Guía de Compras Saludables
-                </CardTitle>
-                <CardDescription>Consejos para optimizar tu presupuesto.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex gap-4">
-                  <Sprout className="w-8 h-8 text-green-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg text-green-800">Planifica tus Comidas</h3>
-                    <p className="text-slate-600">Antes de ir a comprar, decide qué vas a comer durante la semana. Así comprarás solo lo necesario.</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <Refrigerator className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg text-blue-800">Almacenamiento Inteligente</h3>
-                    <p className="text-slate-600">Guarda las verduras de hoja con papel toalla para absorber humedad. Mantén tomates y plátanos fuera del refrigerador.</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <Lightbulb className="w-8 h-8 text-yellow-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg text-yellow-800">Compra de Temporada</h3>
-                    <p className="text-slate-600">Los productos de temporada son más baratos, frescos y sabrosos. Investiga qué está de temporada en tu zona.</p>
-                  </div>
-                </div>
-                
-                <div className="flex gap-4">
-                  <Sparkles className="w-8 h-8 text-purple-600 mt-1 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-lg text-purple-800">Reduce el Desperdicio</h3>
-                    <p className="text-slate-600">Usa tallos de brócoli o hojas de zanahoria para caldos. Congela frutas muy maduras para batidos.</p>
-                  </div>
-                </div>
-              </CardContent>
+            <Card className="bg-white/70 backdrop-blur-sm shadow-lg">
+                <CardHeader><CardTitle className="text-green-800 flex items-center gap-2"><Apple className="w-6 h-6" />Guía de Compras Saludables</CardTitle><CardDescription>Consejos para aprovechar al máximo tu presupuesto y tus alimentos.</CardDescription></CardHeader>
+                <CardContent className="space-y-6">
+                    <div className="flex gap-4"><Sprout className="w-8 h-8 text-green-600 mt-1 flex-shrink-0" /><div><h3 className="font-bold text-lg text-green-800">Planifica tus Comidas</h3><p className="text-slate-600">Antes de ir a comprar, decide qué vas a comer durante la semana. Así comprarás solo lo necesario.</p></div></div>
+                    <div className="flex gap-4"><Refrigerator className="w-8 h-8 text-blue-600 mt-1 flex-shrink-0" /><div><h3 className="font-bold text-lg text-blue-800">Almacenamiento Inteligente</h3><p className="text-slate-600">Guarda las verduras de hoja con una toalla de papel para absorber la humedad. Mantén los tomates y plátanos fuera del refrigerador.</p></div></div>
+                    <div className="flex gap-4"><Lightbulb className="w-8 h-8 text-yellow-600 mt-1 flex-shrink-0" /><div><h3 className="font-bold text-lg text-yellow-800">Compra de Temporada</h3><p className="text-slate-600">Los productos de temporada no solo son más baratos, sino también más frescos y sabrosos. ¡Investiga qué está de temporada en tu zona!</p></div></div>
+                    <div className="flex gap-4"><Sparkles className="w-8 h-8 text-purple-600 mt-1 flex-shrink-0" /><div><h3 className="font-bold text-lg text-purple-800">Reduce el Desperdicio</h3><p className="text-slate-600">Usa los tallos de brócoli o las hojas de zanahoria para caldos. Congela frutas muy maduras para batidos.</p></div></div>
+                </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
@@ -890,3 +700,4 @@ export default function PlanificadorCompras() {
     </div>
   )
 }
+
